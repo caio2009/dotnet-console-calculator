@@ -13,6 +13,11 @@ class Program
     static string currentValue = "";
     static string operation = "";
 
+    static List<string> calculatorHistory = new List<string>();
+
+    static int markedCursorPositionX;
+    static int markedCursorPositionY;
+
     static void Main(string[] args)
     {
         while (runProgram)
@@ -21,7 +26,8 @@ class Program
             ListenKeyPress();
         }
 
-        Console.WriteLine("\n\nFim do programa.\n");
+        Console.Write("\n\n\n\n\n\n\n\n\n");
+        Console.WriteLine("Fim do programa.\n");
     }
 
     static void DrawProgram()
@@ -31,6 +37,7 @@ class Program
         PrintPreviousValue();
         PrintOperation();
         PrintCurrentValue();
+        PrintCalculatorHistory();
     }
 
     static void ListenKeyPress()
@@ -95,6 +102,13 @@ class Program
                     break;
             }
 
+            if (calculatorHistory.Count == 5)
+            {
+                calculatorHistory.RemoveAt(0);
+            }
+
+            calculatorHistory.Add($"{previousValue} {operation} {currentValue} = {result}");
+
             if (callback != null) callback(result);
         }
     }
@@ -114,6 +128,9 @@ class Program
             {
                 previousValue = currentValue;
                 currentValue = "";
+
+                // If a new calculation begins, clear the calculator history.
+                if (calculatorHistory.Count > 0) calculatorHistory.Clear();
             }
         }
         else
@@ -155,11 +172,14 @@ class Program
         previousValue = "";
         currentValue = "";
         operation = "";
+        calculatorHistory.Clear();
     }
 
     static void ReverseValueSign()
     {
-        if (currentValue == "")
+        var IsEmpty = String.IsNullOrEmpty;
+
+        if (IsEmpty(currentValue))
         {
             double value = double.Parse(previousValue);
             value = -value;
@@ -176,6 +196,20 @@ class Program
     static void ExitProgram()
     {
         runProgram = false;
+    }
+
+    static void PrintCalculatorHistory()
+    {
+        Console.Write("\n\n");
+        Console.WriteLine("Histórico (5 últimos cálculos):");
+
+        for (int i = calculatorHistory.Count - 1; i >= 0; i--)
+        {
+            Console.WriteLine(calculatorHistory[i]);
+        }
+
+        // Back to current value position
+        Console.SetCursorPosition(markedCursorPositionX, markedCursorPositionY);
     }
 
     static void PrintDescription()
@@ -208,5 +242,8 @@ class Program
     static void PrintCurrentValue()
     {
         Console.Write("Valor atual   : {0}", currentValue);
+
+        markedCursorPositionX = Console.GetCursorPosition().Left;
+        markedCursorPositionY = Console.GetCursorPosition().Top;
     }
 }
