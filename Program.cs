@@ -1,193 +1,212 @@
-﻿bool runProgram = true;
+﻿using System.Text;
 
-char[] digits = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.' };
-char[] operations = { '+', '-', '*', '/' };
+namespace Calculator;
 
-string inputPreviousValue = "";
-string inputCurrentValue = "";
-string operation = "";
-
-int relativePosition;
-
-// ================================================================================
-
-void ClearWindowLine(int linePosition)
+class Program
 {
-    Console.SetCursorPosition(0, linePosition);
+    static bool runProgram = true;
 
-    for (int i = 0; i < Console.WindowWidth; i++)
+    static char[] digits = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.' };
+    static char[] operations = { '+', '-', '*', '/' };
+
+    static string previousValue = "";
+    static string currentValue = "";
+    static string operation = "";
+
+    static void Main(string[] args)
     {
-        Console.Write(" ");
+        while (runProgram)
+        {
+            DrawProgram();
+            ListenKeyPress();
+        }
+
+        Console.WriteLine("\n\nFim do programa.\n");
     }
 
-    Console.SetCursorPosition(0, linePosition);
-}
-
-void PrintPreviousValue()
-{
-    ClearWindowLine(relativePosition);
-    Console.Write("Valor anterior: {0}", inputPreviousValue);
-}
-
-void PrintOperation()
-{
-    ClearWindowLine(relativePosition + 1);
-    Console.Write("Operador      : {0}", operation);
-}
-
-void PrintInput()
-{
-    ClearWindowLine(relativePosition + 2);
-    Console.Write("Valor atual   : {0}", inputCurrentValue);
-}
-
-void BackspaceInput()
-{
-    if (inputCurrentValue.Length > 0)
+    static void DrawProgram()
     {
-        Console.Write("\b ");
-        Console.SetCursorPosition(Console.GetCursorPosition().Left - 1, relativePosition);
+        Console.Clear();
+        PrintDescription();
+        PrintPreviousValue();
+        PrintOperation();
+        PrintCurrentValue();
+    }
 
-        if (inputCurrentValue.Length >= 0)
+    static void ListenKeyPress()
+    {
+        var cki = Console.ReadKey(true);
+
+        switch (cki.Key)
         {
-            inputCurrentValue = inputCurrentValue.Substring(0, inputCurrentValue.Length - 1);
+            case ConsoleKey.Enter:
+                ShowResult();
+                break;
+            case ConsoleKey.Backspace:
+                BackspaceCurrentValue();
+                break;
+            case ConsoleKey.R:
+                ResetValues();
+                break;
+            case ConsoleKey.T:
+                ReverseValueSign();
+                break;
+            case ConsoleKey.Escape:
+                ExitProgram();
+                break;
+            default:
+                // If other keys have been pressed 
+
+                char ch = cki.KeyChar;
+
+                bool isDigit = digits.Contains(ch);
+                bool isOperation = operations.Contains(ch);
+
+                if (isDigit) currentValue += ch;
+                else if (isOperation) ChangeOperation(ch);
+                break;
+        }
+    }
+
+    delegate void DoCalcCallback(double result);
+    static void DoCalc(DoCalcCallback? callback)
+    {
+        var IsEmpty = String.IsNullOrEmpty;
+
+        bool canDoCalc = !IsEmpty(operation) & !IsEmpty(previousValue) & !IsEmpty(currentValue);
+
+        if (canDoCalc)
+        {
+            double result = 0;
+
+            switch (operation)
+            {
+                case "+":
+                    result = double.Parse(previousValue) + double.Parse(currentValue);
+                    break;
+                case "-":
+                    result = double.Parse(previousValue) - double.Parse(currentValue);
+                    break;
+                case "*":
+                    result = double.Parse(previousValue) * double.Parse(currentValue);
+                    break;
+                case "/":
+                    result = double.Parse(previousValue) / double.Parse(currentValue);
+                    break;
+            }
+
+            if (callback != null) callback(result);
+        }
+    }
+
+    static void ChangeOperationDoCalcCb(double result)
+    {
+        previousValue = result.ToString();
+        currentValue = "";
+    }
+    static void ChangeOperation(char operation)
+    {
+        var IsEmpty = String.IsNullOrEmpty;
+
+        if (IsEmpty(Program.operation))
+        {
+            if (!IsEmpty(currentValue))
+            {
+                previousValue = currentValue;
+                currentValue = "";
+            }
         }
         else
         {
-            inputCurrentValue = "";
+            DoCalc(ChangeOperationDoCalcCb);
+        }
+
+        Program.operation = operation.ToString();
+    }
+
+    static void ShowResultDoCalcCb(double result)
+    {
+        previousValue = result.ToString();
+        currentValue = "";
+        operation = "";
+    }
+    static void ShowResult()
+    {
+        DoCalc(ShowResultDoCalcCb);
+    }
+
+    static void BackspaceCurrentValue()
+    {
+        if (currentValue.Length > 0)
+        {
+            if (currentValue.Length >= 0)
+            {
+                currentValue = currentValue.Substring(0, currentValue.Length - 1);
+            }
+            else
+            {
+                currentValue = "";
+            }
         }
     }
-}
 
-double DoCalc(string operation, double value1, double value2)
-{
-    double result = 0;
-
-    switch (operation)
+    static void ResetValues()
     {
-        case "+":
-            result = value1 + value2;
-            break;
-        case "-":
-            result = value1 - value2;
-            break;
-        case "*":
-            result = value1 * value2;
-            break;
-        case "/":
-            result = value1 / value2;
-            break;
+        previousValue = "";
+        currentValue = "";
+        operation = "";
     }
 
-    return result;
-}
+    static void ReverseValueSign()
+    {
+        if (currentValue == "")
+        {
+            double value = double.Parse(previousValue);
+            value = -value;
+            previousValue = value.ToString();
+        }
+        else
+        {
+            double value = double.Parse(currentValue);
+            value = -value;
+            currentValue = value.ToString();
+        }
+    }
 
-// ================================================================================
-
-Console.WriteLine(@"
-Calculadora Simples de Terminal.
-
-Operadores Aritméticos: + Adição; - Subtração; * Multiplicação; / Divisão.
-
-Funcionamento: Digite números e operadores aritméticos no campo de entrada.
-               Como se fosse uma calculadora de mão.
-
-Comando de tecla:
-- ENTER: Visualizar o resultado.
-- C    : Limpar a entrada.
-- T    : Inverter o sinal do número. Se o valor atual estiver vazio,
-         então o número do valor anterior será invertido.
-- ESC  : Sair do programa.
-");
-
-relativePosition = Console.GetCursorPosition().Top;
-
-while (runProgram)
-{
-    PrintPreviousValue();
-    PrintOperation();
-    PrintInput();
-
-    ConsoleKeyInfo cki = Console.ReadKey(true);
-
-    if (cki.Key == ConsoleKey.Escape)
+    static void ExitProgram()
     {
         runProgram = false;
-        break;
     }
-    else if (cki.Key == ConsoleKey.Backspace)
+
+    static void PrintDescription()
     {
-        BackspaceInput();
+        StringBuilder description = new StringBuilder();
+        description
+            .Append("Calculadora Simples para Terminal.\n\n")
+            .Append("Operadores Aritméticos: + Adição; - Subtração; * Multiplicação; / Divisão.\n\n")
+            .Append("Funcionamento: Digite números e operadores aritméticos no campo de entrada.\n")
+            .Append("               Como se fosse uma calculadora de mão.\n\n")
+            .Append("Comando de tecla:\n")
+            .Append("- ENTER: Visualizar o resultado.\n")
+            .Append("- R    : Resetar valores.\n")
+            .Append("- T    : Inverter o sinal do número. Se o valor atual estiver vazio,.\n")
+            .Append("         então o número do valor anterior será invertido.\n")
+            .Append("- ESC  : Sair do programa.\n\n");
+        Console.Write(description);
     }
-    else
+
+    static void PrintPreviousValue()
     {
-        char ch = cki.KeyChar;
-        bool isDigit = digits.Contains(ch);
-        bool isOperation = operations.Contains(ch);
+        Console.Write("Valor anterior: {0}\n", previousValue);
+    }
 
-        if (isDigit)
-        {
-            inputCurrentValue += ch;
-        }
-        else if (isOperation)
-        {
-            bool operationIsNotEmpty = !String.IsNullOrEmpty(operation);
-            bool inputPreviousValueIsNotEmpty = !String.IsNullOrEmpty(inputPreviousValue);
-            bool inputCurrentValueIsNotEmpty = !String.IsNullOrEmpty(inputCurrentValue);
+    static void PrintOperation()
+    {
+        Console.Write("Operador      : {0}\n", operation);
+    }
 
-            if (operationIsNotEmpty & inputPreviousValueIsNotEmpty & inputCurrentValueIsNotEmpty)
-            {
-                double result = DoCalc(operation, double.Parse(inputPreviousValue), double.Parse(inputCurrentValue));
-                inputPreviousValue = result.ToString();
-                inputCurrentValue = "";
-            }
-            else
-            {
-                if (inputCurrentValueIsNotEmpty)
-                {
-                    inputPreviousValue = inputCurrentValue;
-                    inputCurrentValue = "";
-                }
-            }
-
-            operation = ch.ToString();
-        }
-        else if (cki.Key == ConsoleKey.Enter)
-        {
-            bool operationIsNotEmpty = !String.IsNullOrEmpty(operation);
-            bool inputPreviousValueIsNotEmpty = !String.IsNullOrEmpty(inputPreviousValue);
-            bool inputCurrentValueIsNotEmpty = !String.IsNullOrEmpty(inputCurrentValue);
-
-            if (operationIsNotEmpty & inputPreviousValueIsNotEmpty & inputCurrentValueIsNotEmpty)
-            {
-                double result = DoCalc(operation, double.Parse(inputPreviousValue), double.Parse(inputCurrentValue));
-                inputPreviousValue = result.ToString();
-                inputCurrentValue = "";
-                operation = "";
-            }
-        }
-        else if (cki.Key == ConsoleKey.C)
-        {
-            inputCurrentValue = "";
-            inputPreviousValue = "";
-            operation = "";
-        }
-        else if (cki.Key == ConsoleKey.T)
-        {
-            if (inputCurrentValue == "")
-            {
-                double value = double.Parse(inputPreviousValue);
-                value = -value;
-                inputPreviousValue = value.ToString();
-            }
-            else
-            {
-                double value = double.Parse(inputCurrentValue);
-                value = -value;
-                inputCurrentValue = value.ToString();
-            }
-        }
+    static void PrintCurrentValue()
+    {
+        Console.Write("Valor atual   : {0}", currentValue);
     }
 }
-
-Console.WriteLine("\n\nFim do programa.\n");
